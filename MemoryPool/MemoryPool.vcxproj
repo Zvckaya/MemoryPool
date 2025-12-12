@@ -123,6 +123,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CContiguousPool.h" />
     <ClInclude Include="CMemoryPool.h" />
     <ClInclude Include="CPlayer.h" />
   </ItemGroup>
