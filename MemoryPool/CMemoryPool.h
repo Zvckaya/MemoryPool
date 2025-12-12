@@ -41,8 +41,8 @@ public:
 		while (_pFreeNode != nullptr)
 		{
 			st_BLOCK_NODE* pDeleteNode = _pFreeNode;
-			_pFreeNode = _pFreeNode->next;
-			delete pDeleteNode;
+			_pFreeNode = _pFreeNode->next; //노드 갱신
+			delete pDeleteNode; //실제 메모리 삭제 
 		}
 	}
 

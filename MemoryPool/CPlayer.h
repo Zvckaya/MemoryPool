@@ -15,10 +15,10 @@ private:
 
 CPlayer::CPlayer(int id):iPlayerId(id), iHp(100),iMp(100)
 {
-	std::cout << "Player持失" << std::endl;
+	std::cout << "Player"<<id<<"持失" << std::endl;
 }
 
 CPlayer::~CPlayer()
 {
-	std::cout << "Player社瑚" << std::endl;
+	std::cout << "Player" << iPlayerId << "社瑚" << std::endl;
 }
