@@ -1,6 +1,11 @@
 #pragma once
 #include <new>
 #include <utility> 
+#include <assert.h>
+#include <iostream>
+
+#define CODE_ALLOC 0x99999999
+#define CODE_FREE 0xDEADDEAD 
 
 template<class DATA>
 class CMemoryPool
@@ -8,12 +13,16 @@ class CMemoryPool
 public:
 	struct st_BLOCK_NODE
 	{
+		CMemoryPool* pOwner; //노드를 할당한 메모리 풀 주소 
+		unsigned int checkCode; //현재 노드 상태 
+
+		st_BLOCK_NODE* next;
+
 		//템플릿으로 넘겨받은 객체를 직접 선언하지 않고, 그 크기만큼의 메모리 공간만 잡아놈
 		// 처음에는 DATA를 놨으나.그러면 생성자 호출을 무조건 해야함. 
 		//alignas이용 
 		alignas(DATA) unsigned char data[sizeof(DATA)];
 
-		st_BLOCK_NODE* next;
 	};
 
 	CMemoryPool(int iBlockNum, bool bPlacementNew = false) :
@@ -28,6 +37,12 @@ public:
 			// DATA의 생성자 호출을 막을 수 있다.
 			st_BLOCK_NODE* pNode = new st_BLOCK_NODE;
 
+
+			//할당자 
+			pNode->pOwner = this;
+			pNode->checkCode = CODE_FREE; //반환됨 형태
+
+
 			//LIFO 방식으로 연결(스택 형태)
 			pNode->next = _pFreeNode;
 			_pFreeNode = pNode;
@@ -38,6 +53,11 @@ public:
 
 	virtual ~CMemoryPool()
 	{
+		if (m_iUseCount != 0)
+		{
+			std::cout << "미반환 객체 존재 ";
+		}
+
 		while (_pFreeNode != nullptr)
 		{
 			st_BLOCK_NODE* pDeleteNode = _pFreeNode;
@@ -54,17 +74,26 @@ public:
 	{
 		st_BLOCK_NODE* pNode = nullptr;
 
-		if (_pFreeNode == nullptr)
+		if (_pFreeNode == nullptr) //메모리 풀이 없다.
 		{
-			pNode = new st_BLOCK_NODE;
+			pNode = new st_BLOCK_NODE; //노드 만들고 
+			pNode->pOwner = this; //생성한 메모리 풀만 기ㅣ억 
 			m_iCapacity++;
 		}
-		else
+		else //여유 풀이 있으면 
 		{
-			pNode = _pFreeNode;
+			pNode = _pFreeNode;  //프리노드 갱신
 			_pFreeNode = _pFreeNode->next;
 		}
 
+		if (pNode->checkCode == CODE_ALLOC)
+		{
+			std::cout << "프리 리스트 오염";
+			return nullptr;
+		}
+
+
+		pNode->checkCode = CODE_ALLOC;
 		m_iUseCount++;
 
 		//배열의 시작 주소를 DATA*로 캐스팅 
@@ -86,15 +115,35 @@ public:
 		if (pData == nullptr)
 			return false;
 
+		//offsetof로 data의 위치를 구한후, pData의 주소에서 빼주어 node의 위치를 구함
+		uintptr_t nodeAddr = reinterpret_cast<uintptr_t>(pData) - offsetof(st_BLOCK_NODE, data);
+		//그 후 그 주소위치를 node로 캐스팅
+		st_BLOCK_NODE* pNode = reinterpret_cast<st_BLOCK_NODE*>(nodeAddr);
+
+		
+		//내풀에서 만든 노드인가?
+		if (pNode->pOwner != this)
+		{
+			std::cout << "다른풀 노드 해제 시도";
+		}
+
+		//이미 해제된 노드인가?
+		if (pNode->checkCode == CODE_FREE)
+		{
+
+			std::cout << "해제된 노드 해제 시도 ";
+		}
+
+		//정상 해제 절차 
+
 		if (m_bPlacementNew)
 		{
-			//만약 true 면 소멸자만 호출 
 			pData->~DATA();
 		}
 
-		//다음 노드를 찾아야되니까 캐스팅, DATA상태로는 next노드를 알 수 업음
-		st_BLOCK_NODE* pNode = reinterpret_cast<st_BLOCK_NODE*>(pData);
+		pNode->checkCode = CODE_FREE;
 
+		// FreeList에 넣기
 		pNode->next = _pFreeNode;
 		_pFreeNode = pNode;
 
@@ -102,7 +151,6 @@ public:
 
 		return true;
 	}
-
 	int GetCapacityCount(void) { return m_iCapacity; }
 	int GetUseCount(void) { return m_iUseCount; }
 
