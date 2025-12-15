@@ -3,6 +3,8 @@
 #include <utility> 
 #include <assert.h>
 #include <iostream>
+#include <cstddef> 
+#include <cstdint> 
 
 #define CODE_ALLOC 0x99999999
 #define CODE_FREE 0xDEADDEAD 
