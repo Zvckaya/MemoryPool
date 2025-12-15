@@ -1,44 +1,37 @@
+🛡️ 고성능 안전 메모리 풀 (High-Performance & Safe Memory Pool)
+C++로 구현된 헤더 온리(Header-only) 고성능 오브젝트 풀입니다.
 
+잦은 동적 할당(new/delete) 오버헤드를 제거하여 성능을 극대화하면서도, **이중 해제(Double Free)**나 잘못된 포인터 해제(Invalid Free) 같은 치명적인 메모리 오류를 방지하기 위한 강력한 검증 로직을 포함하고 있습니다.
 
-# 고성능 C++ 템플릿 메모리 풀 (High-Performance Memory Pool)
-C++로 구현된 헤더 온리(Header-only) 고성능 오브젝트 풀(Object Pool / FreeList)입니다.
+🚀 주요 특징 (Key Features)
+1. 성능 최적화 (Performance)
+LIFO (Last-In, First-Out) 전략: 가장 최근에 반환된(Hot) 메모리 블록을 우선 재사용하여 CPU 캐시 적중률(Cache Hit Rate)을 극대화합니다.
 
-잦은 동적 할당(new/delete)으로 인한 오버헤드를 제거하고, LIFO(Stack) 구조를 채택하여 캐시 지역성(Cache Locality)을 극대화하도록 설계되었습니다.
+템플릿(Template) & 가변 인자(Variadic Templates): 모든 타입의 객체를 지원하며, Alloc 시 생성자 인자를 완벽하게 전달(Perfect Forwarding)합니다.
 
-## 🚀 주요 특징 (Key Features)
-템플릿(Template) 기반: 기본 자료형부터 사용자 정의 클래스까지 모든 타입 지원.
+Placement New: 메모리 할당과 객체 생성을 분리하여 불필요한 초기화 비용을 제거했습니다.
 
-LIFO (Last-In, First-Out) 전략: 가장 최근에 반환된(Hot) 메모리 블록을 우선 재사용하여 CPU 캐시 적중률(Cache Hit Rate) 향상.
+2. 강력한 안전성 (Robust Safety)
+Owner Check: 해당 메모리 풀에서 할당된 노드가 맞는지 검사하여, 다른 풀의 객체나 엉뚱한 포인터 해제를 방지합니다.
 
-할당과 생성의 완벽한 분리:
+Double Free 방지: 매직 넘버(MAGIC_CODE)를 사용하여 이미 해제된 메모리를 다시 해제하려는 시도를 차단합니다.
 
-풀 초기화 시점에는 순수 메모리만 확보 (불필요한 기본 생성자 호출 방지).
+Memory Corruption 감지: 메모리 블록 헤더의 무결성을 검사하여 오염 여부를 확인합니다.
 
-사용 시점(Alloc)에 생성자 호출.
+Memory Leak 경고: 풀 소멸 시 반환되지 않은 객체가 있다면 경고 메시지를 출력합니다.
 
-alignas와 byte 배열을 사용하여 메모리 정렬(Alignment) 준수.
-
-가변 인자 템플릿(Variadic Templates) & 완벽한 전달(Perfect Forwarding):
-
-Alloc(args...) 호출 시 인자의 개수나 타입에 상관없이 객체 생성자로 완벽하게 전달.
-
-Placement New & 명시적 소멸자:
-
-이미 할당된 메모리 위에 객체를 생성(placement new)하고, 반환 시 메모리 해제 없이 소멸자(~DATA)만 호출하여 재사용.
-
-자동 확장(Automatic Expansion): 미리 확보한 노드가 고갈되면 자동으로 추가 메모리를 할당하여 확장.
-
-## 📦 설치 방법 (Installation)
+📦 설치 방법 (Installation)
 이 라이브러리는 **헤더 온리(Header-Only)**입니다.
 
-별도의 빌드 과정 없이 MemoryPool.h 파일을 프로젝트 경로에 복사하고 include 하여 사용하세요.
+별도의 빌드 없이 MemoryPool.h 파일을 프로젝트에 포함하여 사용하세요.
+
 ```C++
 
 #include "MemoryPool.h"
 ```
-## 🛠 사용법 (Usage)
-### 1. 기본 사용 (생성자/소멸자 호출 불필요 시)
-구조체(struct)나 단순 데이터 타입처럼 생성자/소멸자 호출이 굳이 필요 없는 경우입니다.
+🛠 사용법 (Usage)
+1. 기본 사용 (단순 구조체)
+생성자/소멸자 호출이 필요 없는 구조체나 기본 타입(int, float 등)에 적합합니다.
 
 ```C++
 
@@ -46,37 +39,34 @@ struct Data {
     int x, y;
 };
 ```
-
- 1. 메모리 풀 생성 (초기 블록 10개)
-// 두 번째 인자 기본값 false: 생성자/소멸자 호출 안 함
+// 1. 풀 생성 (초기 블록 10개, 생성자 호출 false)
 CMemoryPool<Data> pool(10); 
 
- 2. 할당 (단순 메모리 포인터 반환)
+// 2. 할당 (단순 메모리 포인터 반환)
 Data* pData = pool.Alloc(); 
 pData->x = 10;
 
- 3. 반환 (풀로 복귀)
+// 3. 반환
 pool.Free(pData);
-### 2. 객체 사용 (생성자 인자가 필요한 경우)
-클래스처럼 생성자와 소멸자 호출이 필수적인 경우, bPlacementNew 옵션을 true로 설정해야 합니다.
+2. 객체 사용 (생성자/소멸자 필수)
+클래스 객체 사용 시, 두 번째 인자를 true로 설정하여 Placement New를 활성화해야 합니다.
 
 ```C++
 
 class Player {
 public:
     Player(int id, int hp) : m_id(id), m_hp(hp) {
-        std::cout << "Player 생성됨" << std::endl;
+        std::cout << "Player 생성" << std::endl;
     }
     ~Player() {
-        std::cout << "Player 소멸됨" << std::endl;
+        std::cout << "Player 소멸" << std::endl;
     }
 private:
-    int m_id;
-    int m_hp;
+    int m_id, m_hp;
 };
 
 int main() {
-    // [중요] 두 번째 인자를 'true'로 설정하여 Placement New 모드 활성화
+    // [중요] 두 번째 인자를 'true'로 설정하여 생성자/소멸자 자동 호출 활성화
     CMemoryPool<Player> playerPool(10, true);
 
     // Alloc에 인자를 전달하면 생성자가 호출됨
@@ -90,43 +80,33 @@ int main() {
     return 0;
 }
 ```
-## 🧠 구현 상세 (Design Details)
-### 1. 메모리 레이아웃 (st_BLOCK_NODE)
-풀을 생성할 때 DATA 객체의 생성자가 호출되는 것을 막기 위해, 객체 자체 대신 메모리 바이트 배열을 사용합니다. 이때 alignas를 사용하여 CPU가 요구하는 메모리 정렬 조건을 만족시킵니다.
+🧠 내부 구현 상세 (Implementation Details)
+1. 안전한 노드 구조 (st_BLOCK_NODE)
+데이터 앞에 보안 검사용 메타데이터(Header)를 배치하여 무결성을 보장합니다.
+
 ```C++
 
 struct st_BLOCK_NODE {
-    // DATA 크기만큼의 raw memory. 
-    // alignas를 통해 DATA 타입의 정렬 요구사항을 준수함.
-    alignas(DATA) unsigned char data[sizeof(DATA)]; 
+    CMemoryPool* pOwner;     // 소유자 풀 확인 (Invalid Free 방지)
+    unsigned int checkCode;  // 상태 코드 (Double Free 방지)
+    st_BLOCK_NODE* next;     // 다음 노드 포인터
     
-    st_BLOCK_NODE* next; // 다음 노드를 가리키는 포인터
+    // 실제 데이터 (Alignment 준수)
+    alignas(DATA) unsigned char data[sizeof(DATA)]; 
 };
 ```
-### 2. 가변 인자 템플릿을 통한 생성 (Alloc)
-사용자가 Alloc에 어떤 인자를 넣든, std::forward를 통해 불필요한 복사 없이 생성자로 전달합니다.
+2. 검증 로직 (Free)
+사용자가 데이터 포인터(pData)를 반납하면, 역산(offset calculation)을 통해 헤더를 찾고 3단계 검증을 수행합니다.
 
-```C++
+Offset Calculation: pData 주소에서 offsetof(st_BLOCK_NODE, data)만큼 빼서 노드 시작 주소를 찾습니다.
 
-template<typename... Args>
-DATA* Alloc(Args&&... args) {
-    // ... 노드 꺼내기 로직 ...
-    
-    // 단순 메모리(byte array) 주소를 DATA 포인터로 재해석
-    DATA* pRet = reinterpret_cast<DATA*>(pNode->data);
+Owner Check: pNode->pOwner == this인지 확인합니다.
 
-    if (m_bPlacementNew) {
-        // 해당 메모리 위치에 생성자 호출 (Placement New)
-        new (pRet) DATA(std::forward<Args>(args)...);
-    }
-    return pRet;
-}
-```
-### 3. 포인터 재해석을 통한 반환 (Free)
-구조체의 첫 번째 멤버(data)의 주소는 구조체 전체(st_BLOCK_NODE)의 시작 주소와 동일하다는 C++ 표준을 이용하여, reinterpret_cast로 안전하게 노드를 복구합니다.
+State Check: checkCode가 CODE_ALLOC(사용 중)인지 확인합니다. 만약 CODE_FREE(이미 반납됨)라면 에러를 출력하고 차단합니다.
 
-```C++
+⚠️ 주의사항 (Notes)
+디버깅 오버헤드: 안전성 검사를 위해 노드마다 메타데이터(pOwner, checkCode)가 추가되므로, 순수 데이터 크기보다 약간 더 많은 메모리를 사용합니다.
 
-// pData 포인터를 다시 st_BLOCK_NODE 포인터로 변환하여 리스트에 연결
-st_BLOCK_NODE* pNode = reinterpret_cast<st_BLOCK_NODE*>(pData);
-```
+스레드 안전성: 본 라이브러리는 싱글 스레드 환경에 최적화되어 있습니다. 멀티 스레드 환경에서 사용 시 Lock 처리가 필요합니다.
+
+미반환 객체: 풀이 소멸될 때까지 반환(Free)되지 않은 객체는 메모리 누수가 발생할 수 있으며, 소멸자에서 이에 대한 경고 메시지를 출력합니다.
