@@ -3,9 +3,10 @@
 #include <vector>
 
 
+CMemoryPool<CPlayer> playerPool = CMemoryPool<CPlayer>(10, false);
+
 int main()
 {
-	CMemoryPool<CPlayer> playerPool = CMemoryPool<CPlayer>(10,true);
 
 	std::vector<CPlayer*> players(20);
 
@@ -24,9 +25,10 @@ int main()
 		playerPool.Free(i); 
 	}
 
-
+	CPlayer* test1 = playerPool.Alloc(13);
+	playerPool.Free(test1);
+	playerPool.Free(test1);
 	
-	std::cout << "È®ÀÎ";
 
 
 }
